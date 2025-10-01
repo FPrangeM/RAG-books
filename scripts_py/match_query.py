@@ -2,17 +2,17 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import duckdb
 
+
+
 conn = duckdb.connect('./data/duckdb.db')
 
-embedded_df = conn.execute('select * from lof_embedded').df()
-embedded_df.head(2)
-# output:
-'''
-	titulo	capitulo	chunk_id	conteudo	all-MiniLM-L6-v2
-0	Carmesim	1	0	“Dói!”\n[1]\n“Dói tanto!”\n“Minha cabeça dói d...	[-0.05513400584459305, 0.03674433380365372, 0....
-1	Carmesim	1	1	Zhou Mingrui, que não desconhecia encontros si...	[-0.014141588471829891, 0.016819780692458153, ...
-'''
+conn.execute('show tables').df()
 
+
+embedded_table = 'lof-intfloat/multilingual-e5-large-instruct'
+
+embedded_df = conn.execute(f'select * from "{embedded_table}"').df()
+embedded_df.head(2)
 
 
 
@@ -32,24 +32,25 @@ conn.create_function(
 
 
 
+model = SentenceTransformer('intfloat/multilingual-e5-large-instruct', device='cuda')
+
+# model = SentenceTransformer('intfloat/multilingual-e5-large')
+# model = SentenceTransformer('all-MiniLM-L6-v2')
 
 
-
-
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-
-pergunta = 'Qual a formula da poção do palhaço do caminho do vidente?'
+pergunta = 'O que é o MI9 ?'
 query_embedding = model.encode([pergunta]).tolist()[0]
 
 
-results = conn.execute("""
-    SELECT capitulo, titulo, conteudo, chunk_id,
-            cosine_similarity("all-MiniLM-L6-v2", ?) as similarity
-    FROM lof_embedded
+results = conn.execute(f"""
+    SELECT 
+        conteudo,
+        cosine_similarity(embedded, ?) as similarity
+    FROM "{embedded_table}"
     ORDER BY similarity DESC
     LIMIT ?
-""", [query_embedding, 3]).df()
+    """
+    ,[query_embedding, 20]).df()
 
 
 
@@ -57,7 +58,12 @@ trechos = results.conteudo.to_list()
 
 
 
-print(f'Considerando pura e exclusivamente os trechos a seguir: ')
-print(f'{trechos}\n')
-print(f'Responda a pergunta:')
+print(f'Considerando pura e exclusivamente os trechos a seguir:')
+print()
+print('--------------------------------------------------')
+for i,t in enumerate(trechos):
+    print(f'{i+1} -> {t}')
+print('--------------------------------------------------')
+print()
+print(f'Responda a pergunta da forma mais completa possivel:')
 print(f'{pergunta}')

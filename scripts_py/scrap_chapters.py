@@ -7,16 +7,27 @@ from bs4 import BeautifulSoup
 import duckdb
 import pandas as pd
 from tqdm.asyncio import tqdm 
-
+import numpy as np
 
 conn = duckdb.connect('./data/duckdb.db')
 
-cap_i = 51
-cap_f = 71
+cap_i = 1
+cap_f = 950
 max_concurrent_requests = 20
 table_name = 'lord_of_mysteries'
 
 semaphore = asyncio.Semaphore(max_concurrent_requests)
+
+conn.execute(f'select max(capitulo) from {table_name}').df()
+
+def chapter_diff(cap_i,cap_f,conn):
+
+    capitulos_cadastrados = conn.execute(f'select distinct capitulo from {table_name}').df().iloc[:,0].to_numpy()
+    capitulos_cadastrados.sort()
+    lista_a_baixar = np.setdiff1d(np.arange(cap_i,cap_f+1),capitulos_cadastrados)
+
+    return lista_a_baixar
+
 
 async def scrap_chapter(session, n_cap):
 
@@ -44,7 +55,7 @@ async def main():
     Orquestra a execução de todas as tarefas assíncronas.
     """
     resultados = []
-    capitulos_a_buscar = range(cap_i, cap_f + 1)
+    capitulos_a_buscar = chapter_diff(cap_i,cap_f,conn)
     
     async with aiohttp.ClientSession() as session:
         tasks = [scrap_chapter(session, n) for n in capitulos_a_buscar]
@@ -71,7 +82,7 @@ async def main():
     
     conn.execute(f'insert into {table_name} (select * from df)')
 
-    conn.close()
     conn.commit()
+    conn.close()
 
     # conn.execute(f'select count(1) from {table_name}').fetch_df()
