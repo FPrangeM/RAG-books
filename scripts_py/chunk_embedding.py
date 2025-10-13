@@ -76,18 +76,3 @@ conn.execute(f'create or replace table "{embedded_table_name}" as (select * from
 conn.close()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-conn.execute('create or replace table {embedded_table_name} as (select * from chunks_df)')
-conn.close()

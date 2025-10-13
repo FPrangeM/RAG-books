@@ -9,11 +9,14 @@ conn = duckdb.connect('./data/duckdb.db')
 conn.execute('show tables').df()
 
 
-embedded_table = 'lof-intfloat/multilingual-e5-large-instruct'
+embedded_table = 'lof-qwen-embedding'
 
 embedded_df = conn.execute(f'select * from "{embedded_table}"').df()
-embedded_df.head(2)
+embedded_df.head(10)
 
+
+
+model_name = 'Qwen/Qwen3-Embedding-0.6B'
 
 
 def cosine_similarity_vec(a, b):
@@ -32,14 +35,16 @@ conn.create_function(
 
 
 
-model = SentenceTransformer('intfloat/multilingual-e5-large-instruct', device='cuda')
-model = SentenceTransformer('google/embeddinggemma-300M', device='cuda')
+model = SentenceTransformer(
+    model_name, 
+    # device='cuda',
+    # model_kwargs={'attn_implementation': 'sdpa'},
+    # model_kwargs={'attn_implementation': 'flash_attention_2'},
+    # tokenizer_kwargs={'padding_side': 'left'},
+)
 
-# model = SentenceTransformer('intfloat/multilingual-e5-large')
-# model = SentenceTransformer('all-MiniLM-L6-v2')
 
-
-pergunta = 'Foi o deus divindade da tempestade?'
+pergunta = 'O que é uma singularidade ?'
 query_embedding = model.encode([pergunta]).tolist()[0]
 
 
@@ -52,7 +57,7 @@ results = conn.execute(f"""
     ORDER BY similarity DESC
     LIMIT ?
     """
-    ,[query_embedding, 20]).df()
+    ,[query_embedding, 3]).df()
 
 print(f'RAG executado em {time.time()-t1:.2f}')
 

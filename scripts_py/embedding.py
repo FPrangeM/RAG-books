@@ -8,7 +8,7 @@ chunks_df = conn.execute('select * from lof_chunks').df()
 
 
 # Carregar o modelo de embedding
-model = SentenceTransformer('all-MiniLM-L6-v2')  # Modelo leve e eficaz
+# model = SentenceTransformer('all-MiniLM-L6-v2')  # Modelo leve e eficaz
 model = SentenceTransformer('intfloat/multilingual-e5-large', device='cuda')
 
 # Gerar embeddings para todos os chunks
