@@ -1,0 +1,5 @@
+[    {
+        "key": "ctrl+shift+9",
+        "command": "jupyter.execSelectionInteractive"
+    }
+]
