@@ -2,21 +2,20 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import duckdb
 import time
-
+import ollama
 
 conn = duckdb.connect('./data/duckdb.db')
 
 conn.execute('show tables').df()
-
-
 embedded_table = 'lof-qwen-embedding'
 
-embedded_df = conn.execute(f'select * from "{embedded_table}"').df()
-embedded_df.head(10)
-
-
-
 model_name = 'Qwen/Qwen3-Embedding-0.6B'
+
+
+
+
+# embedded_df = conn.execute(f'select * from "{embedded_table}"').df()
+# embedded_df.head(10)
 
 
 def cosine_similarity_vec(a, b):
@@ -37,16 +36,18 @@ conn.create_function(
 
 model = SentenceTransformer(
     model_name, 
-    # device='cuda',
+    device='cuda',
     # model_kwargs={'attn_implementation': 'sdpa'},
     # model_kwargs={'attn_implementation': 'flash_attention_2'},
     # tokenizer_kwargs={'padding_side': 'left'},
 )
 
 
-pergunta = 'O que é uma singularidade ?'
+pergunta = 'Quem é o criador caido ?'
 query_embedding = model.encode([pergunta]).tolist()[0]
 
+
+n=5
 
 t1 = time.time()
 results = conn.execute(f"""
@@ -57,7 +58,7 @@ results = conn.execute(f"""
     ORDER BY similarity DESC
     LIMIT ?
     """
-    ,[query_embedding, 3]).df()
+    ,[query_embedding, n]).df()
 
 print(f'RAG executado em {time.time()-t1:.2f}')
 
@@ -66,13 +67,24 @@ print(f'RAG executado em {time.time()-t1:.2f}')
 trechos = results.conteudo.to_list()
 
 
-
-print(f'Considerando pura e exclusivamente os trechos a seguir:')
-print()
-print('--------------------------------------------------')
+text = ''
+text+=f'Considerando pura e exclusivamente os trechos a seguir:'
+text+='\n'
+text+='--------------------------------------------------'
+text+='\n'
+text+='\n'
 for i,t in enumerate(trechos):
-    print(f'{i+1} -> {t}')
-print('--------------------------------------------------')
-print()
-print(f'Responda a pergunta da forma mais completa possivel:')
-print(f'{pergunta}')
+    text+=f'{i+1} -> {t}'
+    text+='\n'
+text+='\n'
+text+='--------------------------------------------------'
+text+='\n'
+text+=f'Responda a pergunta da forma mais completa possivel:'
+text+=f'{pergunta}'
+
+print(text)
+
+
+
+resposta = ollama.generate(model='qwen3:4b-instruct',prompt=text)
+resposta.response
